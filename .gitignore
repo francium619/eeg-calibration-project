@@ -1,0 +1,15 @@
+# Python
+__pycache__/
+*.pyc
+
+# Node (only needed to regenerate the .docx report; not source)
+node_modules/
+
+# Generated model artifacts -- regenerate via pretrain.py / meta_train.py / eval_calibration.py
+*.npz
+*.pt
+
+# Verification/scratch files from building this project (not deliverables)
+page-*.jpg
+lu52bof8.tmp
+.~lock.*
