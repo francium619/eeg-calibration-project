@@ -97,8 +97,7 @@ def patchify(X):
     the same tokenization style LaBraM/BENDR-style EEG foundation models use
     (each token = one channel's short time window)."""
     n = X.shape[0]
-    X = X.reshape(n, C, N_WIN, WIN)          # split time into windows
-    X = X.transpose(0, 1, 2, 3)               # (n, C, N_WIN, WIN)
+    X = X.reshape(n, C, N_WIN, WIN)          # split time into windows: (n, C, N_WIN, WIN)
     X = X.reshape(n, C * N_WIN, WIN)          # (n, tokens, WIN)
     return X
 
