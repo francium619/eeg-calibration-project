@@ -62,6 +62,10 @@ check(
     np.random.randn(3, 4),
 )
 
+# mean over an axis (used by EEGBackbone.encode's pooled = tok.mean(axis=1))
+Wm = Tensor(np.random.randn(4, 3), requires_grad=False)
+check("mean(axis)+matmul+sum", lambda t: t.mean(axis=1).matmul(Wm).sum(), np.random.randn(5, 6, 4))
+
 # cross entropy
 labels = np.array([0, 2, 1])
 
