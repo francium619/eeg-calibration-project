@@ -1,7 +1,7 @@
 """Sanity + gradient checks for model.py (backbone, LoRA, classifier head)."""
 import numpy as np
-from tensor import softmax_cross_entropy
-from model import EEGBackbone, ClassifierHead, zero_grad
+from tensor import Tensor, softmax_cross_entropy
+from model import EEGBackbone, ClassifierHead, zero_grad, clip_grad_norm
 import data
 
 np.random.seed(0)
@@ -110,8 +110,35 @@ def test_lora_only_updates_lora():
     print("[OK] LoRA fine-tuning leaves frozen base weights untouched")
 
 
+def test_clip_grad_norm():
+    """clip_grad_norm is the safety net eval_calibration.py and meta_train.py
+    rely on when a badly-conditioned random LoRA init takes an exploding
+    step. Check all three branches: under-budget grads pass through
+    unchanged, over-budget grads are rescaled to exactly max_norm (direction
+    preserved), and non-finite grads (NaN/Inf, e.g. from a diverged step)
+    are zeroed out rather than silently propagated into the next update."""
+    p1 = Tensor(np.zeros(3), requires_grad=True)
+    p1.grad = np.array([0.3, 0.4, 0.0])  # norm = 0.5, under budget
+    clip_grad_norm([p1], max_norm=5.0)
+    assert np.allclose(p1.grad, [0.3, 0.4, 0.0]), "under-budget grad should be untouched"
+
+    p2 = Tensor(np.zeros(3), requires_grad=True)
+    p2.grad = np.array([3.0, 4.0, 0.0])  # norm = 5.0, over budget
+    clip_grad_norm([p2], max_norm=1.0)
+    assert np.isclose(np.linalg.norm(p2.grad), 1.0), "over-budget grad should be rescaled to max_norm"
+    assert np.allclose(p2.grad / np.linalg.norm(p2.grad), [0.6, 0.8, 0.0]), "clipping should preserve direction"
+
+    p3 = Tensor(np.zeros(2), requires_grad=True)
+    p3.grad = np.array([np.nan, 1.0])
+    clip_grad_norm([p3], max_norm=1.0)
+    assert np.all(p3.grad == 0.0), "non-finite grad norm should zero the gradient, not propagate NaN"
+
+    print("[OK] clip_grad_norm: no-op under budget, rescales over budget, zeroes non-finite grads")
+
+
 if __name__ == "__main__":
     test_forward_shapes()
     test_pretrain_grad_flow()
     test_lora_only_updates_lora()
+    test_clip_grad_norm()
     print("\nAll model tests passed.")
