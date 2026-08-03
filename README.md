@@ -109,7 +109,89 @@ compute), not the *absolute* accuracy.
   matters a lot when your autodiff engine is hand-rolled. MAML is a natural
   next step if the from-scratch autodiff engine is replaced with PyTorch.
 
-## Step 2: PyTorch + real data (BCI IV 2a via MOABB)
+## Step 2: PyTorch pipeline (rebuilt, executed, and measured)
+
+`torch_data.py`, `torch_model.py`, `torch_pretrain.py`, `torch_meta_train.py`,
+`torch_eval_calibration.py`, `eeg_augment.py`, `run_ablation.py` and
+`test_torch_pipeline.py` are the real pipeline. Unlike the first draft, this
+version **runs** -- end to end, with a 14-check regression suite including a
+shuffled-label leakage control.
+
+```bash
+pip install torch                      # + `moabb` for the real dataset
+python3 test_torch_pipeline.py         # 14 checks, all green
+python3 torch_pretrain.py       --subjects 1 2 3 4 5 6 7
+python3 torch_meta_train.py     --subjects 1 2 3 4 5 6 7
+python3 torch_eval_calibration.py --eval-subjects 8 9
+python3 run_ablation.py --run baseline align_none tta calib24
+```
+
+With `moabb` installed and network available it uses real BCI IV 2a
+(`BNCI2014_001`, 9 subjects x 2 sessions on different days, 4-class motor
+imagery). Without it, it falls back to a shape-identical synthetic fixture so
+the code stays runnable and testable offline -- the source is printed and
+recorded in every result row, so a fixture number can never be mistaken for a
+real one.
+
+### Headline result (synthetic fixture -- see the caveat below)
+
+Subjects 8 and 9 held out of pretraining *and* meta-training; calibrate on
+session 1, evaluate on session 2; 12 stratified calibration trials; identical
+optimizer, learning rate and step budget for every arm.
+
+| arm | best accuracy | vs zero-shot | paired 95% CI |
+|---|---|---|---|
+| chance | 0.250 | | |
+| zero-shot (no calibration) | 0.611 | -- | -- |
+| head-only linear probe | 0.620 | +0.009 | not significant |
+| random-init LoRA | 0.612 | +0.001 | not significant |
+| **meta-learned LoRA (FOMAML + Meta-SGD)** | **0.734** | **+0.123** | **[+0.094, +0.155]** |
+
+The meta-learned initialization reaches 0.712 after a **single** gradient step
+on 12 trials -- which is the actual claim this project exists to test.
+
+**These numbers come from the synthetic fixture, not real EEG.** The
+development environment for this work could reach PyPI and nothing else --
+`bnci-horizon-2020.eu`, PhysioNet and Zenodo are all blocked by the network
+proxy -- so real recordings could not be downloaded. The fixture is
+deliberately tuned to the same difficulty regime as BCI IV 2a (within-subject
+cross-session ~0.53, cross-subject zero-shot near chance) so that the ablation
+ladder measures the pipeline rather than an easy dataset. Run with
+`--source moabb` for numbers about brains.
+
+### What changed and what it was worth
+
+Full log in [CHANGELOG_OPTIMIZATION.md](CHANGELOG_OPTIMIZATION.md). Summary:
+
+| change | effect |
+|---|---|
+| per-trial standardization (MOABB volts were fed in raw) | pipeline learns at all |
+| Euclidean Alignment (He & Wu 2020) | **+6.2 points zero-shot** |
+| square/log power stem (ShallowFBCSPNet-style) instead of ELU-only | **0.250 -> 0.649** source-val; the model went from not learning to learning |
+| Reptile -> FOMAML with a differentiable inner loop | **-0.036 -> +0.123** vs zero-shot |
+| stratified few-shot sampling | removes a silent 0.75 accuracy ceiling |
+| explicit adapter reset in the control arm | the "random LoRA" baseline was previously pretrained LoRA |
+| BatchNorm frozen during calibration | the "frozen" backbone was not frozen |
+
+Nine correctness bugs found and fixed by actually executing the code; they are
+listed individually in the changelog.
+
+### On "perfect accuracy"
+
+Four-class motor imagery does not go to 100%. Published within-subject work on
+BCI IV 2a lands at 68-80%, cross-subject few-shot at 55-70%, and 15-30% of
+people are "BCI illiterate" for motor imagery at all. Any pipeline reporting
+near-perfect accuracy on this task has a leak, which is why
+`test_torch_pipeline.py` includes a shuffled-label control and why every
+result carries a paired confidence interval. The target this project optimizes
+is: **beat the zero-shot baseline by a statistically significant margin at the
+smallest possible calibration budget.**
+
+See [FINE_TUNING_PLAYBOOK.md](FINE_TUNING_PLAYBOOK.md) for the prioritized
+plan for real raw data -- dataset ladder, LaBraM swap, adaptation methods, and
+the evaluation protocol to hold to.
+
+## Original notes on the first PyTorch draft
 
 `torch_data.py`, `torch_model.py`, `torch_pretrain.py`, `torch_meta_train.py`,
 and `torch_eval_calibration.py` are a full port of the pipeline above onto
