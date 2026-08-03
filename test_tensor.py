@@ -66,6 +66,15 @@ check(
 Wm = Tensor(np.random.randn(4, 3), requires_grad=False)
 check("mean(axis)+matmul+sum", lambda t: t.mean(axis=1).matmul(Wm).sum(), np.random.randn(5, 6, 4))
 
+# reshape (used by ClassifierHead.pool's query.reshape(D,1) / scores.reshape(B,N)
+# to move a vector between attention-pooling's matmul and softmax shapes)
+Wr = Tensor(np.random.randn(4, 5), requires_grad=False)
+check(
+    "reshape+matmul+relu+sum",
+    lambda t: t.reshape(3, 4).matmul(Wr).relu().sum(),
+    np.random.randn(12),
+)
+
 # cross entropy
 labels = np.array([0, 2, 1])
 
