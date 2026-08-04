@@ -75,6 +75,18 @@ check(
     np.random.randn(12),
 )
 
+# pow / truediv -- implemented on Tensor but not exercised by any model code
+# (mean() divides by n as a plain Python float, not via Tensor.__truediv__),
+# so this is their only regression coverage.
+check("pow+sum", lambda t: ((t.relu() + 0.5) ** 1.7).sum(), np.random.randn(4, 5))
+
+Wd = Tensor(np.random.randn(4, 3), requires_grad=False)
+check(
+    "truediv+matmul+sum",
+    lambda t: ((t.relu() + 0.5) / 2.0).matmul(Wd).sum(),
+    np.random.randn(5, 4),
+)
+
 # cross entropy
 labels = np.array([0, 2, 1])
 
