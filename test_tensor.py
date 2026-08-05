@@ -87,6 +87,15 @@ check(
     np.random.randn(5, 4),
 )
 
+# transpose_last2 (used by attention's q.matmul(k.transpose_last2()) to form
+# the (..., d, N) key matrix for scores = q @ k^T), had no regression coverage
+Wt = Tensor(np.random.randn(4, 3), requires_grad=False)
+check(
+    "transpose_last2+matmul+sum",
+    lambda t: t.transpose_last2().matmul(Wt).relu().sum(),
+    np.random.randn(2, 4, 5),
+)
+
 # cross entropy
 labels = np.array([0, 2, 1])
 
