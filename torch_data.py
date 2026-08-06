@@ -197,11 +197,10 @@ def load_synthetic(subject_ids, n_channels=22, fs=250.0, dur_s=2.0,
             lat = np.zeros((len(y), n_src, T))
             for i, cls in enumerate(y):
                 for s in range(n_src):
-                    # ERD: the source matching the class is suppressed, the
-                    # others are not -- the actual physiology of motor imagery.
-                    # ERD: the class-matched source is *suppressed*. The
-                    # contrast is small on purpose -- real mu-ERD is a
-                    # modest percentage power change, not an on/off switch.
+                    # ERD: the class-matched source is *suppressed*, others
+                    # are not -- the actual physiology of motor imagery. The
+                    # contrast is small on purpose -- real mu-ERD is a modest
+                    # percentage power change, not an on/off switch.
                     amp = (1.0 - erd_contrast) if s == cls else 1.0
                     amp *= erng.uniform(0.75, 1.25)   # per-trial variability
                     ph = erng.uniform(0, 2 * np.pi)
