@@ -12,7 +12,8 @@ import torch
 import torch.nn.functional as F
 
 from torch_data import (MetaEEGDataLoader, reference_covariance, euclidean_align,
-                        _inv_sqrt_spd, zscore_per_trial)
+                        _inv_sqrt_spd, zscore_per_trial, bandpass_fft, make_filter_bank,
+                        DEFAULT_BANDS)
 from torch_model import make_config, build, CalibModel, adapter_state_dict, load_adapter_state_dict
 
 PASS, FAIL = [], []
@@ -56,6 +57,23 @@ def main():
     (xs, _), (Xq, _) = d.calibration_and_query(1, 12, seed=0)
     overlap = any(bool((Xq == s).all(dim=-1).all(dim=-1).any()) for s in xs)
     check("calibration and query sets are disjoint", not overlap)
+
+    # 5b. bandpass_fft passes in-band content, suppresses out-of-band content.
+    fs, T = 250.0, 250
+    t = np.arange(T) / fs
+    x = (np.sin(2 * np.pi * 10 * t) + np.sin(2 * np.pi * 25 * t))[None, None, :]
+    xf = bandpass_fft(x, fs, 8.0, 13.0)
+    spec = np.abs(np.fft.rfft(xf[0, 0]))
+    freqs = np.fft.rfftfreq(T, d=1.0 / fs)
+    in_band = spec[(freqs >= 9) & (freqs <= 11)].max()
+    out_band = spec[(freqs >= 24) & (freqs <= 26)].max()
+    check("bandpass_fft passes in-band, suppresses out-of-band",
+          in_band > 10 * out_band, f"in-band={in_band:.3f} out-of-band={out_band:.3f}")
+
+    # 5c. make_filter_bank stacks sub-bands along the channel axis.
+    Xfb = make_filter_bank(np.random.randn(2, 3, T), fs, DEFAULT_BANDS)
+    check("make_filter_bank stacks sub-bands along channel axis",
+          Xfb.shape == (2, 3 * len(DEFAULT_BANDS), T))
 
     print("== model ==")
     cfg = make_config(d.n_channels, d.n_timepoints, 4, profile="sandbox")
