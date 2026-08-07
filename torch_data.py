@@ -138,10 +138,18 @@ class EEGTrials(Dataset):
 def load_moabb(subject_ids, fmin=4.0, fmax=38.0, resample=250.0):
     """Real BNCI2014_001. Requires `pip install moabb` and network access on
     first call (raw files are a few hundred MB)."""
+    import moabb_path_fix
+    moabb_path_fix.apply()   # MOABB 1.5.0 mangles the Windows drive letter and
+                             # downloads relative to cwd; see that module.
+
     from moabb.datasets import BNCI2014_001
     from moabb.paradigms import MotorImagery
 
-    paradigm = MotorImagery(fmin=fmin, fmax=fmax, events=EVENTS, resample=resample)
+    # n_classes is required alongside `events`: MOABB only infers it when
+    # `events is None`, otherwise it stays None and used_events() raises
+    # `TypeError: '<' not supported between 'int' and 'NoneType'`.
+    paradigm = MotorImagery(n_classes=len(EVENTS), fmin=fmin, fmax=fmax,
+                            events=EVENTS, resample=resample)
     X, y, meta = paradigm.get_data(dataset=BNCI2014_001(), subjects=list(subject_ids))
     out = {}
     for sid in subject_ids:
