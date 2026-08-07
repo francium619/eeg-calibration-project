@@ -8,15 +8,14 @@ node_modules/
 # Generated model artifacts -- regenerate via pretrain.py / meta_train.py / eval_calibration.py
 *.npz
 *.pt
+*.pt.resume
+
+# Run ledgers -- resumable state for long runs, not deliverables.
+# Aggregated numbers belong in README.md.
+results.jsonl
+loso_results.jsonl
 
 # Verification/scratch files from building this project (not deliverables)
 page-*.jpg
 lu52bof8.tmp
 .~lock.*
-
-# training artifacts
-*.pt
-*.pt.resume
-*.npz
-results.jsonl
-__pycache__/
