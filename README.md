@@ -50,7 +50,7 @@ and is a reasonable, well-scoped angle for a project.
 |---|---|
 | NumPy prototype (`tensor.py`, `model.py`, `data.py`, ...) | built, executed, gradient-checked |
 | PyTorch pipeline (`torch_*.py`) | **built, executed, tested** — 14-check regression suite incl. a shuffled-label leakage control |
-| Real BCI IV 2a numbers | **not yet run** — see the caveat under "Headline result" |
+| Real BCI IV 2a numbers | **download verified, training not yet run** — see the caveat under "Headline result" |
 
 ## Quickstart
 
@@ -87,14 +87,16 @@ trials; identical optimizer, learning rate and step budget for every arm.
 The meta-learned initialization reaches 0.712 after a **single** gradient step
 on 12 trials — which is the actual claim this project exists to test.
 
-> **These numbers are from the synthetic fixture, not real EEG.** The
-> environment this was developed in could reach PyPI and nothing else —
-> `bnci-horizon-2020.eu`, PhysioNet and Zenodo are all blocked by its network
-> proxy — so real recordings could not be downloaded. The fixture is
-> deliberately tuned to the same difficulty regime as BCI IV 2a
-> (within-subject cross-session ≈ 0.53, cross-subject zero-shot near chance)
-> so the ablation ladder measures the *pipeline* rather than an easy dataset.
-> Run with `--source moabb` for numbers about brains.
+> **These numbers are from the synthetic fixture, not real EEG.** Real
+> BNCI2014_001 downloads now verify end to end (9/9 subjects, 18 files,
+> 779.9 MB, checked against the published spec — see `moabb_path_fix.py`
+> and the `n_classes` fix in `torch_data.py`), but the training benchmark
+> itself has not yet been re-run against it, so the table above still comes
+> from the fixture. The fixture is deliberately tuned to the same difficulty
+> regime as BCI IV 2a (within-subject cross-session ≈ 0.53, cross-subject
+> zero-shot near chance) so the ablation ladder measures the *pipeline*
+> rather than an easy dataset. Run with `--source moabb` for numbers about
+> brains.
 
 ## What changed and what it was worth
 
@@ -168,9 +170,10 @@ small; the PyTorch pipeline above is the version to trust.
 
 ## Honest limitations
 
-- **No real EEG data has been run through this yet.** Only PyPI was reachable
-  from the development environment. Everything is written so `--source moabb`
-  is the only change needed.
+- **No real EEG data has been through the training benchmark yet.** The
+  `--source moabb` download path is now verified working end to end (see
+  `moabb_path_fix.py`), so producing real headline numbers is a matter of
+  running the pipeline, not further debugging the loader.
 - **The backbone is trained from scratch**, not a real foundation model. It is
   much smaller than LaBraM (~200-dim, 12 layers). The `LoRALinear` +
   `SpatialAdapter` pattern applies directly to any loaded `nn.Linear`, which
