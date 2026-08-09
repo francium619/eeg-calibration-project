@@ -3,8 +3,9 @@ Minimal reverse-mode autodiff engine, built on NumPy.
 
 This exists so the EEG backbone / LoRA / meta-learning code in this project
 can be expressed as ordinary matrix ops (matmul, softmax, layernorm, GELU...)
-without hand-deriving gradients for every layer, and without requiring
-PyTorch (which could not be installed in this sandbox -- see README).
+without hand-deriving gradients for every layer. It predates the PyTorch
+port (`torch_*.py`) and is kept as a dependency-free reference -- see
+README for how the two pipelines relate.
 
 Design: each `Tensor` wraps a NumPy array and, if `requires_grad`, records a
 `_backward` closure that accumulates gradients into its parents. Calling
