@@ -117,4 +117,15 @@ check(
     np.random.randn(2, 5, 4),
 )
 
+# backward() should refuse to run on a non-scalar output (e.g. forgetting a
+# final .sum()/.mean()), since the reverse pass assumes a single seed gradient
+# of 1.0 -- this guard had no regression coverage.
+try:
+    Tensor(np.random.randn(3, 4), requires_grad=True).relu().backward()
+    status = "FAIL"
+except AssertionError as e:
+    status = "OK" if "scalar" in str(e) else "FAIL"
+print(f"[{status}] backward() rejects non-scalar tensor")
+assert status == "OK", "backward() should raise on a non-scalar tensor"
+
 print("\nAll gradient checks passed.")
