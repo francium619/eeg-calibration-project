@@ -53,6 +53,15 @@ def main():
         ok &= len(torch.unique(ys)) == 4 and (torch.bincount(ys, minlength=4) == 3).all().item()
     check("few-shot calibration sample is class-balanced", ok)
 
+    # 4b. When calib_size isn't a multiple of the class count, the per-class
+    #     quota rounds down, so the sample is shorter than requested rather
+    #     than padded/overfilled -- document this so a caller that assumes
+    #     len(idx) == n_total doesn't get a silent surprise.
+    y_all = d.store[1]["0train"].y
+    idx10 = d.stratified_indices(y_all, 10, seed=0)
+    check("stratified_indices rounds down for a non-divisible n_total",
+          len(idx10) == 8, f"len={len(idx10)} (expected 8 = (10//4)*4)")
+
     # 5. No trial overlap between the calibration and query sessions.
     (xs, _), (Xq, _) = d.calibration_and_query(1, 12, seed=0)
     overlap = any(bool((Xq == s).all(dim=-1).all(dim=-1).any()) for s in xs)

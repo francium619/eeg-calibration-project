@@ -300,7 +300,16 @@ class MetaEEGDataLoader:
         return sorted(self.store[subject_id])
 
     def stratified_indices(self, y, n_total, seed):
-        """Equal trials per class (see docstring point 3)."""
+        """Equal trials per class (see docstring point 3).
+
+        Returns `(n_total // n_classes) * n_classes` indices, not
+        necessarily `n_total`: when `n_total` isn't a multiple of the
+        class count, the per-class quota rounds down and the result is
+        shorter than requested (e.g. n_total=10 over 4 classes yields 8,
+        not 10). Callers that need an exact count should pick an n_total
+        that divides evenly -- the default calib_size=12 over 4 classes
+        does.
+        """
         rng = np.random.default_rng(seed)
         y = y.numpy() if torch.is_tensor(y) else np.asarray(y)
         classes = np.unique(y)
