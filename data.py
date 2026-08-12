@@ -1,10 +1,11 @@
 """
 Synthetic multi-subject / multi-session EEG generator.
 
-Why synthetic: this project's point is the *calibration* method (LoRA +
-meta-learning), not sourcing a dataset. A real download (BCI Competition IV
-2a, PhysioNet MI, etc. via MOABB/MNE) needs network access to fetch ~100s of
-MB, which this sandbox couldn't do reliably (see README). So instead this
+Why synthetic: this is the NumPy prototype, and its point is the
+*calibration* method (LoRA + meta-learning), not sourcing a dataset. The
+PyTorch pipeline (`torch_data.py`) has a working loader for real BCI
+Competition IV 2a data via MOABB (see README); this file intentionally
+stays synthetic-only so the prototype has no network dependency. It
 generates data with the same qualitative structure that motivates the
 project:
 
@@ -18,11 +19,12 @@ project:
   - Colored (1/f-ish) background noise, which is what real EEG looks like
     far more than white noise.
 
-Swap-in path to real data: replace `make_subject_trials()` with a loader
-that reads BCI IV 2a / PhysioNet epochs (via moabb.datasets +
+Swap-in path to real data: replace `make_subject()` with a loader that
+reads BCI IV 2a / PhysioNet epochs (via moabb.datasets +
 mne.Epochs.get_data()), z-scored per-channel, reshaped into the same
 (trials, channels, time) array this file returns. Everything downstream
-(patchify, backbone, LoRA, meta-learning) is agnostic to that swap.
+(patchify, backbone, LoRA, meta-learning) is agnostic to that swap --
+`torch_data.py` already does exactly this for the PyTorch pipeline.
 """
 import numpy as np
 
