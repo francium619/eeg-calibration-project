@@ -1,7 +1,7 @@
 """Sanity + gradient checks for model.py (backbone, LoRA, classifier head)."""
 import numpy as np
 from tensor import Tensor, softmax_cross_entropy
-from model import EEGBackbone, ClassifierHead, zero_grad, clip_grad_norm
+from model import EEGBackbone, ClassifierHead, zero_grad, clip_grad_norm, snapshot, restore
 import data
 
 np.random.seed(0)
@@ -136,9 +136,32 @@ def test_clip_grad_norm():
     print("[OK] clip_grad_norm: no-op under budget, rescales over budget, zeroes non-finite grads")
 
 
+def test_snapshot_restore_round_trip():
+    """meta_train.py's Reptile step depends on snapshot()/restore() giving an
+    independent copy of parameter data: each outer step snapshots meta_params,
+    lets the inner loop mutate them in place, diffs the result against the
+    snapshot, then restores. If snapshot() ever aliased memory instead of
+    copying it, that diff would silently collapse to zero (or reflect
+    mid-adaptation garbage) every outer step, and meta-training would train
+    on nothing without raising an error."""
+    p = Tensor(np.array([1.0, 2.0, 3.0]), requires_grad=True)
+
+    snap = snapshot([p])
+    p.data[:] = 99.0  # mutate after snapshotting
+    assert np.array_equal(snap[0], [1.0, 2.0, 3.0]), "snapshot must be independent of later mutation"
+
+    restore([p], snap)
+    assert np.array_equal(p.data, [1.0, 2.0, 3.0]), "restore must reset param data from the snapshot"
+
+    p.data[0] = -1.0  # mutate after restoring
+    assert snap[0][0] == 1.0, "mutating a restored param must not alias the snapshot"
+    print("[OK] snapshot()/restore() are independent copies, not aliases")
+
+
 if __name__ == "__main__":
     test_forward_shapes()
     test_pretrain_grad_flow()
     test_lora_only_updates_lora()
     test_clip_grad_norm()
+    test_snapshot_restore_round_trip()
     print("\nAll model tests passed.")
