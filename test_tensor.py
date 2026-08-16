@@ -96,6 +96,12 @@ check(
     np.random.randn(2, 4, 5),
 )
 
+# subtraction (used by pretrain.py's masked-reconstruction loss: pred - target)
+# -- every other binary op above has a direct check; __sub__ had none.
+Ws = Tensor(np.random.randn(4, 3), requires_grad=False)
+target = Tensor(np.random.randn(5, 3), requires_grad=False)
+check("sub+matmul+sum", lambda t: (t.matmul(Ws) - target).relu().sum(), np.random.randn(5, 4))
+
 # cross entropy
 labels = np.array([0, 2, 1])
 
