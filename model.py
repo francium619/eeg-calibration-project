@@ -148,7 +148,7 @@ class EEGBackbone:
     def freeze_backbone_base(self):
         for lyr in self._lora_layers:
             lyr.freeze_base()
-        for t in [self.ch_embed, self.win_embed, self.ln1_g, self.ln1_b, self.ln2_g, self.ln2_b]:
+        for t in [self.ch_embed, self.win_embed, self.mask_token, self.ln1_g, self.ln1_b, self.ln2_g, self.ln2_b]:
             t.requires_grad = False
             t.grad = None
 

@@ -107,6 +107,7 @@ def test_lora_only_updates_lora():
     base_after = bb.patch_embed.W.data.copy()
     assert np.allclose(base_before, base_after), "frozen base weight changed!"
     assert bb.patch_embed.W.grad is None or np.allclose(bb.patch_embed.W.grad, 0), "frozen weight got nonzero grad"
+    assert bb.mask_token.requires_grad is False, "freeze_backbone_base() must also freeze mask_token"
     print("[OK] LoRA fine-tuning leaves frozen base weights untouched")
 
 
