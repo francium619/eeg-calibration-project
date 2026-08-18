@@ -62,6 +62,15 @@ def main():
     check("stratified_indices rounds down for a non-divisible n_total",
           len(idx10) == 8, f"len={len(idx10)} (expected 8 = (10//4)*4)")
 
+    # 4c. Below-one-per-class budgets (n_total < n_classes) are the one case
+    #     where the ">= n_classes" rounding formula above would predict 0
+    #     trials -- the per-class floor of 1 means it actually returns
+    #     n_total trials from n_total distinct classes instead.
+    idx2 = d.stratified_indices(y_all, 2, seed=0)
+    check("stratified_indices doesn't round below-n_classes budgets to zero",
+          len(idx2) == 2 and len(torch.unique(y_all[idx2])) == 2,
+          f"len={len(idx2)} distinct_classes={len(torch.unique(y_all[idx2]))}")
+
     # 5. No trial overlap between the calibration and query sessions.
     (xs, _), (Xq, _) = d.calibration_and_query(1, 12, seed=0)
     overlap = any(bool((Xq == s).all(dim=-1).all(dim=-1).any()) for s in xs)

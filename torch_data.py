@@ -302,13 +302,21 @@ class MetaEEGDataLoader:
     def stratified_indices(self, y, n_total, seed):
         """Equal trials per class (see docstring point 3).
 
-        Returns `(n_total // n_classes) * n_classes` indices, not
-        necessarily `n_total`: when `n_total` isn't a multiple of the
-        class count, the per-class quota rounds down and the result is
-        shorter than requested (e.g. n_total=10 over 4 classes yields 8,
-        not 10). Callers that need an exact count should pick an n_total
-        that divides evenly -- the default calib_size=12 over 4 classes
-        does.
+        Draws `max(1, n_total // n_classes)` trials per class, then
+        truncates the shuffled pool to `n_total` -- so the per-class quota
+        rounds down but never to zero.
+
+        For `n_total >= n_classes` this means the result is
+        `(n_total // n_classes) * n_classes` indices, not necessarily
+        `n_total` (e.g. n_total=10 over 4 classes yields 8, not 10).
+        Callers that need an exact count should pick an n_total that
+        divides evenly -- the default calib_size=12 over 4 classes does.
+
+        For `n_total < n_classes` (e.g. probing a below-one-per-class
+        budget), the per-class floor of 1 means the pre-truncation pool
+        still has one trial per class, so the result has exactly
+        `n_total` trials, each from a distinct class -- not the 0 trials
+        the `>= n_classes` formula above would suggest.
         """
         rng = np.random.default_rng(seed)
         y = y.numpy() if torch.is_tensor(y) else np.asarray(y)
