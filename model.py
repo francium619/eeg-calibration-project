@@ -46,12 +46,6 @@ class Linear:
         self.A = Tensor(rng.standard_normal((d_in, r)) * 0.05, requires_grad=True)
         self.B = Tensor(rng.standard_normal((r, d_out)) * 0.01, requires_grad=True)
 
-    def reset_lora(self, rng):
-        assert self.r > 0
-        d_in, d_out = self.W.data.shape
-        self.A = Tensor(rng.standard_normal((d_in, self.r)) * 0.05, requires_grad=True)
-        self.B = Tensor(rng.standard_normal((self.r, d_out)) * 0.01, requires_grad=True)
-
     def freeze_base(self):
         self.W.requires_grad = False
         self.W.grad = None
@@ -134,11 +128,6 @@ class EEGBackbone:
         for lyr in self._lora_layers:
             lyr.add_lora(r, rng)
 
-    def reset_lora_everywhere(self, seed):
-        rng = np.random.default_rng(seed)
-        for lyr in self._lora_layers:
-            lyr.reset_lora(rng)
-
     def lora_params(self):
         ps = []
         for lyr in self._lora_layers:
@@ -219,14 +208,6 @@ class ClassifierHead:
 
     def params(self):
         return [self.query] + self.linear.base_params()
-
-    def reset(self, seed):
-        rng = np.random.default_rng(seed)
-        self.query = Tensor(rng.standard_normal(D_MODEL) * 0.1, requires_grad=True)
-        d_in, d_out = self.linear.W.data.shape
-        scale = 1.0 / np.sqrt(d_in)
-        self.linear.W = Tensor(rng.uniform(-scale, scale, size=(d_in, d_out)), requires_grad=True)
-        self.linear.b = Tensor(np.zeros(d_out), requires_grad=True)
 
 
 def zero_grad(params):
