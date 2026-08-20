@@ -35,6 +35,7 @@ Run: python3 torch_eval_calibration.py --eval-subjects 8 9
 """
 import argparse
 import json
+import math
 import numpy as np
 import torch
 import torch.nn.functional as F
@@ -76,8 +77,12 @@ def calibrate_curve(bb, head, params, xs, ys, Xq, yq, checkpoints, lr, device,
             loss = F.cross_entropy(head(bb.encode(xb)), ys, label_smoothing=label_smoothing)
             grads = torch.autograd.grad(loss, params, allow_unused=True)
             with torch.no_grad():
-                tot = torch.sqrt(sum((g ** 2).sum() for g in grads if g is not None))
-                scale = min(1.0, clip / (float(tot) + 1e-12))
+                tot = float(torch.sqrt(sum((g ** 2).sum() for g in grads if g is not None)))
+                # Python's min() treats NaN as "not less than", so a NaN norm from a
+                # badly-conditioned random LoRA init would otherwise pass through with
+                # scale=1.0 (no clipping) instead of being zeroed like model.py's
+                # clip_grad_norm() does for the same case.
+                scale = 0.0 if not math.isfinite(tot) else min(1.0, clip / (tot + 1e-12))
                 for i, (p, g) in enumerate(zip(params, grads)):
                     if g is None:
                         continue
