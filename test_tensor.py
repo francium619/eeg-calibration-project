@@ -123,6 +123,17 @@ check(
     np.random.randn(2, 5, 4),
 )
 
+# broadcast bias add: (B,N,L)+(L,) as every Linear layer's X@W + b does --
+# exercises _unbroadcast summing grad over *two* leading batch dims down to
+# a 1D bias shape, unlike batched_linear above which only checks matmul's
+# broadcast. __add__ had no broadcast coverage at all before this.
+bias = Tensor(np.random.randn(4), requires_grad=False)
+check(
+    "add broadcast (B,N,L)+(L,)",
+    lambda t: (t + bias).relu().sum(),
+    np.random.randn(2, 5, 4),
+)
+
 # backward() should refuse to run on a non-scalar output (e.g. forgetting a
 # final .sum()/.mean()), since the reverse pass assumes a single seed gradient
 # of 1.0 -- this guard had no regression coverage.
