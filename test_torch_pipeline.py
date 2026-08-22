@@ -158,6 +158,33 @@ def main():
     check("shuffled-label calibration stays near chance", max(accs) < 0.45,
           f"max acc {max(accs):.3f} (chance 0.250)")
 
+    # 11. calibrate_curve's non-finite-gradient guard must actually skip the
+    #     update, not just scale it by 0.0 -- NaN * 0.0 is still NaN, so a
+    #     scaled update would silently poison the parameter with NaN instead
+    #     of leaving it untouched (model.py's clip_grad_norm avoids this by
+    #     zeroing the gradient array itself rather than scaling by it).
+    bb4, head4 = build(cfg); bb4.freeze_backbone_base(); bb4.set_frozen_eval_mode()
+    params4 = bb4.lora_parameters() + head4.parameters_for_calibration()
+    before4 = [p.detach().clone() for p in params4]
+    real_grad = torch.autograd.grad
+
+    def poisoned_grad(loss, params, **kw):
+        grads = list(real_grad(loss, params, **kw))
+        if grads[0] is not None:
+            grads[0] = grads[0].clone()
+            grads[0].view(-1)[0] = float("nan")
+        return tuple(grads)
+
+    torch.autograd.grad = poisoned_grad
+    try:
+        calibrate_curve(bb4, head4, params4, xs, ys, Xq[:8], yq[:8], [1], 0.05,
+                        torch.device("cpu"))
+    finally:
+        torch.autograd.grad = real_grad
+    check("calibrate_curve skips the update on a non-finite gradient norm instead of propagating NaN",
+          all(torch.equal(a, b) for a, b in zip(before4, params4))
+          and all(torch.isfinite(p).all() for p in params4))
+
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
     if FAIL:
         raise SystemExit("FAILED: " + ", ".join(FAIL))

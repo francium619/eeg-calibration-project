@@ -81,10 +81,14 @@ def calibrate_curve(bb, head, params, xs, ys, Xq, yq, checkpoints, lr, device,
                 # Python's min() treats NaN as "not less than", so a NaN norm from a
                 # badly-conditioned random LoRA init would otherwise pass through with
                 # scale=1.0 (no clipping) instead of being zeroed like model.py's
-                # clip_grad_norm() does for the same case.
-                scale = 0.0 if not math.isfinite(tot) else min(1.0, clip / (tot + 1e-12))
+                # clip_grad_norm() does for the same case. Skipping the update outright
+                # (rather than multiplying by scale=0.0) matters when a gradient tensor
+                # itself contains NaN/Inf entries: NaN * 0.0 is still NaN, so a scaled
+                # update would silently poison the parameter instead of leaving it be.
+                finite = math.isfinite(tot)
+                scale = min(1.0, clip / (tot + 1e-12)) if finite else 0.0
                 for i, (p, g) in enumerate(zip(params, grads)):
-                    if g is None:
+                    if g is None or not finite:
                         continue
                     step = (F.softplus(inner_lrs[i]) if inner_lrs is not None else lr)
                     p -= step * g * scale
