@@ -140,7 +140,7 @@ assume.
    transductive.* Expected +2 to +6.
 2. **FOMAML over Reptile** (already the default). In this repo's fixture,
    switching from Reptile to FOMAML with a working differentiable inner loop
-   moved the meta-init from *worse* than zero-shot (-3.6 points) to +11.7.
+   moved the meta-init from *worse* than zero-shot (-3.6 points) to +12.3.
    That was the largest single change in the whole project.
 3. **Meta-SGD per-parameter inner learning rates** (already implemented). The
    inner LR matters as much as the initialization at 5 gradient steps.
