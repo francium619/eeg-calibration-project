@@ -15,7 +15,7 @@ Your first task, if it hasn't been done:
 
 1. Install a CUDA-enabled torch build appropriate for the RTX 3050. 4 GB VRAM is tight but this model is small.
 2. Confirm `torch.cuda.is_available()` is True and the device is visible.
-3. Re-run `test_torch_pipeline.py` — **all 14 checks must pass on GPU**, including the shuffled-label leakage control. A CUDA install that changes numerics is a problem, not a detail.
+3. Re-run `test_torch_pipeline.py` — **all 19 checks must pass on GPU**, including the shuffled-label leakage control. A CUDA install that changes numerics is a problem, not a detail.
 4. If the install fails or the suite regresses, **roll back to the working CPU build and continue on CPU.** A slow correct run beats a fast broken one. Report exactly what happened.
 
 Never leave the environment in a state where the regression suite does not pass.
