@@ -27,7 +27,6 @@ Run:  python3 torch_pretrain.py --subjects 1 2 3 4 5 6 7
 import argparse
 import os
 import time
-import numpy as np
 import torch
 import torch.nn.functional as F
 
