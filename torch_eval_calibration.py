@@ -67,6 +67,13 @@ def accuracy(bb, head, X, y, device, bs=256, tta=0, fs=250.0, gen=None):
 def calibrate_curve(bb, head, params, xs, ys, Xq, yq, checkpoints, lr, device,
                     inner_lrs=None, clip=5.0, augment=0.0, fs=250.0, gen=None,
                     label_smoothing=0.1, tta=0):
+    # The `done < target` loop below only ever trains forward. A non-ascending
+    # checkpoints list (e.g. a hand-typed `--steps 5 2`) would silently repeat
+    # the previous checkpoint's accuracy for the smaller target instead of
+    # training to it or raising -- catch that here rather than reporting a
+    # wrong number with no signal anything went wrong.
+    assert list(checkpoints) == sorted(checkpoints), \
+        f"checkpoints must be non-decreasing, got {checkpoints}"
     xs, ys = xs.to(device), ys.to(device)
     accs, done = [], 0
     for target in checkpoints:
