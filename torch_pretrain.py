@@ -175,15 +175,20 @@ def main(argv=None):
     if best_state is not None:
         bb.load_state_dict(best_state[0]); head.load_state_dict(best_state[1])
 
+    # best_val is still its -1.0 sentinel when --objective masked never ran the
+    # supervised block above; report that honestly rather than a fake accuracy.
+    src_val_acc = best_val if best_val >= 0 else None
+
     torch.save({"backbone": bb.state_dict(), "head": head.state_dict(),
                 "cfg": cfg.__dict__, "subjects": args.subjects,
                 "align_mode": args.align_mode, "source": data.source,
-                "src_val_acc": best_val}, args.out)
+                "src_val_acc": src_val_acc}, args.out)
     if os.path.exists(ckpt_path):
         os.remove(ckpt_path)
     if not args.quiet:
-        print(f"[pretrain] saved {args.out} (source-val acc {best_val:.3f})")
-    return best_val
+        acc_str = f"{src_val_acc:.3f}" if src_val_acc is not None else "n/a (masked-only run)"
+        print(f"[pretrain] saved {args.out} (source-val acc {acc_str})")
+    return src_val_acc
 
 
 if __name__ == "__main__":
