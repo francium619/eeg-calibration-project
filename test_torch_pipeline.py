@@ -185,6 +185,20 @@ def main():
           all(torch.equal(a, b) for a, b in zip(before4, params4))
           and all(torch.isfinite(p).all() for p in params4))
 
+    # 12. calibrate_curve's `done < target` loop only ever trains forward, so a
+    #     non-ascending checkpoints list (e.g. a hand-typed `--steps 5 2`) must
+    #     be rejected outright rather than silently repeating the previous
+    #     checkpoint's accuracy for the smaller target.
+    bb5, head5 = build(cfg); bb5.freeze_backbone_base(); bb5.set_frozen_eval_mode()
+    params5 = bb5.lora_parameters() + head5.parameters_for_calibration()
+    try:
+        calibrate_curve(bb5, head5, params5, xs, ys, Xq[:8], yq[:8], [5, 2], 0.05,
+                        torch.device("cpu"))
+        rejected = False
+    except AssertionError:
+        rejected = True
+    check("calibrate_curve rejects a non-ascending checkpoints list", rejected)
+
     print(f"\n{len(PASS)} passed, {len(FAIL)} failed")
     if FAIL:
         raise SystemExit("FAILED: " + ", ".join(FAIL))

@@ -49,14 +49,14 @@ and is a reasonable, well-scoped angle for a project.
 | stage | state |
 |---|---|
 | NumPy prototype (`tensor.py`, `model.py`, `data.py`, ...) | built, executed, gradient-checked |
-| PyTorch pipeline (`torch_*.py`) | **built, executed, tested** — 19-check regression suite incl. a shuffled-label leakage control |
+| PyTorch pipeline (`torch_*.py`) | **built, executed, tested** — 20-check regression suite incl. a shuffled-label leakage control |
 | Real BCI IV 2a numbers | **download verified, training not yet run** — see the caveat under "Headline result" |
 
 ## Quickstart
 
 ```bash
 pip install torch                        # add `moabb` for the real dataset
-python3 test_torch_pipeline.py           # 19 checks, all green
+python3 test_torch_pipeline.py           # 20 checks, all green
 python3 torch_pretrain.py         --subjects 1 2 3 4 5 6 7
 python3 torch_meta_train.py       --subjects 1 2 3 4 5 6 7
 python3 torch_eval_calibration.py --eval-subjects 8 9
@@ -140,7 +140,7 @@ smallest possible calibration budget.**
 | `torch_meta_train.py` | FOMAML / Reptile with Meta-SGD per-parameter inner learning rates; meta-objective is the loss on the subject's *other-day* session |
 | `torch_eval_calibration.py` | the experiment: zero-shot vs head-only vs random-LoRA vs meta-LoRA at matched compute, with paired bootstrap CIs |
 | `run_ablation.py` | append-only JSONL results ledger + ablation ladder |
-| `test_torch_pipeline.py` | 19 regression checks, including the shuffled-label leakage control |
+| `test_torch_pipeline.py` | 20 regression checks, including the shuffled-label leakage control |
 
 Both `torch_pretrain.py` and `torch_meta_train.py` support
 `--max-seconds` / `--resume`, so long runs survive short command timeouts.
