@@ -46,8 +46,14 @@ def accuracy(bb, head, X, y):
 
 
 def fine_tune_curve(bb, head, params, X_calib, y_calib, X_query, y_query, step_checkpoints, lr):
+    # The `done < target` loop below only ever trains forward. A non-ascending
+    # step_checkpoints list would silently repeat the previous checkpoint's
+    # accuracy for the smaller target instead of training to it or raising --
+    # catch that here rather than reporting a wrong number with no signal
+    # anything went wrong (see torch_eval_calibration.calibrate_curve).
+    assert list(step_checkpoints) == sorted(step_checkpoints), \
+        f"step_checkpoints must be non-decreasing, got {step_checkpoints}"
     accs = []
-    max_steps = max(step_checkpoints)
     done = 0
     for target in step_checkpoints:
         while done < target:

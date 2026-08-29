@@ -2,6 +2,7 @@
 import numpy as np
 from tensor import Tensor, softmax_cross_entropy
 from model import EEGBackbone, ClassifierHead, zero_grad, clip_grad_norm, snapshot, restore
+from eval_calibration import fine_tune_curve
 import data
 
 np.random.seed(0)
@@ -159,10 +160,35 @@ def test_snapshot_restore_round_trip():
     print("[OK] snapshot()/restore() are independent copies, not aliases")
 
 
+def test_fine_tune_curve_rejects_non_ascending_checkpoints():
+    """fine_tune_curve's `done < target` loop only ever trains forward, so a
+    non-ascending step_checkpoints list (e.g. a hand-typed [5, 2]) must be
+    rejected outright rather than silently repeating the previous
+    checkpoint's accuracy for the smaller target (see the torch port's
+    calibrate_curve, which has the same guard)."""
+    bb = EEGBackbone(data.C, data.N_WIN, data.WIN, seed=1)
+    head = ClassifierHead(data.N_CLASSES, seed=2)
+    bb.freeze_backbone_base()
+    bb.add_lora_everywhere(r=4, seed=5)
+    params = bb.lora_params() + head.params()
+
+    X, y = data.make_subject(np.random.default_rng(7), n_trials=8)
+    patches = data.patchify(X)
+
+    try:
+        fine_tune_curve(bb, head, params, patches, y, patches, y, [5, 2], lr=0.05)
+        rejected = False
+    except AssertionError:
+        rejected = True
+    assert rejected, "fine_tune_curve should reject a non-ascending step_checkpoints list"
+    print("[OK] fine_tune_curve rejects a non-ascending step_checkpoints list")
+
+
 if __name__ == "__main__":
     test_forward_shapes()
     test_pretrain_grad_flow()
     test_lora_only_updates_lora()
     test_clip_grad_norm()
     test_snapshot_restore_round_trip()
+    test_fine_tune_curve_rejects_non_ascending_checkpoints()
     print("\nAll model tests passed.")
